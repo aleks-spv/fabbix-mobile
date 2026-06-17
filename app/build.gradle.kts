@@ -29,9 +29,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     packaging { resources.excludes.add("META-INF/{AL2.0,LGPL2.1}") }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {
@@ -61,9 +66,9 @@ dependencies {
     implementation(libs.room.ktx)
 
     implementation(libs.retrofit2)
-    implementation(libs.retrofit2-gson)
+    implementation(libs.retrofit2.gson)
     implementation(libs.okhttp3)
-    implementation(libs.okhttp3-logging)
+    implementation(libs.okhttp3.logging)
 
     implementation(libs.datastore.prefs)
     implementation(libs.security.crypto)
