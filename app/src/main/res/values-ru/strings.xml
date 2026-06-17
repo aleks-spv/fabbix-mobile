@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">Fabbix Mobile</string>
+    <string name="servers_title">Серверы</string>
+    <string name="servers">Серверы</string>
+    <string name="add_server">Добавить сервер</string>
+    <string name="edit_server">Редактировать сервер</string>
+    <string name="server_name">Отображаемое имя</string>
+    <string name="server_url">URL сервера</string>
+    <string name="username">Имя пользователя</string>
+    <string name="password">Пароль</string>
+    <string name="ignore_ssl">Игнорировать SSL-сертификат</string>
+    <string name="test_connection">Тест соединения</string>
+    <string name="save">Сохранить</string>
+    <string name="no_servers">Серверы не добавлены.\nНажмите + чтобы добавить.</string>
+    <string name="login">Войти</string>
+    <string name="logging_in">Входим…</string>
+    <string name="login_to">Вход в %1$s</string>
+    <string name="problems">Проблемы</string>
+    <string name="hosts">Узлы сети</string>
+    <string name="dashboard">Дашборды</string>
+    <string name="settings">Настройки</string>
+    <string name="search">Поиск…</string>
+    <string name="all">Все</string>
+    <string name="retry">Повторить</string>
+    <string name="no_problems">Нет активных проблем</string>
+    <string name="no_dashboards">Нет дашбордов</string>
+    <string name="refresh_interval">Интервал автообновления</string>
+</resources>
