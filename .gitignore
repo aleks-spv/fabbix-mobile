@@ -44,5 +44,17 @@ hs_err_pid*
 app/release/
 app/debug/
 
-# opencode tool (local config, not project code)
+# Kotlin build cache
+.kotlin/
+
+# Local tool configs (opencode, etc.)
 .opencode/
+
+# Optional: if you use NDK/CMake
+.externalNativeBuild/
+.cxx/
+
+#Icons
+.iconpack/
+.agents_instruction/
+AGENTS.md
