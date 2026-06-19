@@ -67,15 +67,14 @@ com.fabbixmb.app/
 │   ├── settings/       # SettingsScreen, SettingsViewModel
 │   └── triggers/       # TriggersScreen, TriggersViewModel
 └── theme/              # Color, Type, Theme
-Zabbix API Compatibility
+```
+
+## Zabbix API Compatibility
 The app communicates with Zabbix via JSON-RPC API (/api_jsonrpc.php). Tested with:
 
 Zabbix 6.0 LTS
 Zabbix 6.4
 Zabbix 7.0 LTS
-License
-This project is licensed under the MIT License — see the LICENSE file for details.
 
-text
-
----
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
