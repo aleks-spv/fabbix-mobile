@@ -82,13 +82,46 @@ private fun HostCard(host: Host) {
                         color = MaterialTheme.colorScheme.error)
                 }
             }
-            if (expanded && host.interfaces.isNotEmpty()) {
+            if (expanded) {
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()
-                host.interfaces.forEach { iface ->
-                    Text("IP: ${iface.ip}  DNS: ${iface.dns}",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp))
+                
+                // Интерфейсы (уже есть, оставляем)
+                if (host.interfaces.isNotEmpty()) {
+                    Text(stringResource(R.string.interfaces), style = MaterialTheme.typography.labelMedium)
+                    host.interfaces.forEach { iface ->
+                        Text("IP: ${iface.ip}  DNS: ${iface.dns}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                
+                // Наблюдение
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.monitored_by), style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(host.monitoredBy, style = MaterialTheme.typography.bodySmall)
+                
+                // Шаблоны
+                if (host.templates.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.templates), style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        host.templates.forEach { t ->
+                            SuggestionChip(onClick = {}, label = { Text(t) })
+                        }
+                    }
+                }
+                
+                // Макросы
+                if (host.macros.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.macros), style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    host.macros.forEach { m ->
+                        Text("${m.macro} = ${m.value}", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }

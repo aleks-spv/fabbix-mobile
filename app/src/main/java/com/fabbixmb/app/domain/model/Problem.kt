@@ -9,7 +9,8 @@ data class ProblemHost(
     val hostId: String,
     val name: String,
     val ip: String = "",
-    val availability: HostAvailability = HostAvailability.UNKNOWN
+    val availability: HostAvailability = HostAvailability.UNKNOWN,
+    val groups: List<String> = emptyList()
 )
 
 data class Problem(

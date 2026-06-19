@@ -180,21 +180,7 @@ private fun ProblemDetailSheet(problem: Problem, onDismiss: () -> Unit) {
 
             Text(problem.name, style = MaterialTheme.typography.titleMedium)
 
-            if (problem.triggerDescription.isNotEmpty()) {
-                HorizontalDivider()
-                Text(stringResource(R.string.trigger_description),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(problem.triggerDescription, style = MaterialTheme.typography.bodyMedium)
-            }
 
-            if (problem.opdata.isNotEmpty()) {
-                HorizontalDivider()
-                Text(stringResource(R.string.operational_data),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(problem.opdata, style = MaterialTheme.typography.bodyMedium)
-            }
 
             if (problem.hosts.isNotEmpty()) {
                 HorizontalDivider()
@@ -210,8 +196,15 @@ private fun ProblemDetailSheet(problem: Problem, onDismiss: () -> Unit) {
                         ) {
                             Column {
                                 Text(host.name, style = MaterialTheme.typography.bodyMedium)
-                                Text(host.ip, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (host.ip.isNotEmpty()) {
+                                    Text("IP: ${host.ip}", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (host.groups.isNotEmpty()) {
+                                    Text(host.groups.joinToString(", "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                             Box(
                                 modifier = Modifier

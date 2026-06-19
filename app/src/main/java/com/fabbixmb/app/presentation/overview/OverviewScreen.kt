@@ -2,6 +2,7 @@ package com.fabbixmb.app.presentation.overview
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fabbixmb.app.R
 import com.fabbixmb.app.domain.model.Problem
+import com.fabbixmb.app.domain.model.Severity
 import com.fabbixmb.app.presentation.common.SeverityBadge
 import com.fabbixmb.app.presentation.common.UiState
 import java.text.SimpleDateFormat
@@ -90,25 +92,49 @@ private fun ProblemsSummaryCard(s: OverviewData) {
             }
             if (s.severityCounts.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
-                s.severityCounts.entries
-                    .sortedByDescending { it.key.id }
-                    .forEach { (severity, count) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SeverityBadge(severity)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                count.toString(),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    s.severityCounts.entries
+                        .sortedByDescending { it.key.id }
+                        .forEach { (severity, count) ->
+                            SeverityCountItem(severity, count)
                         }
-                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun SeverityCountItem(severity: Severity, count: Int) {
+    val shortName = when (severity) {
+        Severity.DISASTER -> "Dis"
+        Severity.HIGH -> "High"
+        Severity.AVERAGE -> "Avg"
+        Severity.WARNING -> "Warn"
+        Severity.INFO -> "Info"
+        else -> ""
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = severity.color.copy(alpha = 0.15f)
+        ) {
+            Text(
+                count.toString(),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.titleMedium,
+                color = severity.color
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            shortName,
+            style = MaterialTheme.typography.labelSmall,
+            color = severity.color
+        )
     }
 }
 
@@ -170,7 +196,7 @@ private fun RecentProblemItem(problem: Problem) {
                 )
                 if (problem.hosts.isNotEmpty()) {
                     Text(
-                        problem.hosts.joinToString(", "),
+                        problem.hosts.joinToString(", ") { it.name },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

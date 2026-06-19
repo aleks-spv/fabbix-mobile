@@ -58,4 +58,9 @@
     <string name="resolved_at">Resolved</string>
     <string name="ssl">SSL</string>
     <string name="more_options">More options</string>
+    <string name="host_groups">Host groups</string>
+    <string name="interfaces">Interfaces</string>
+    <string name="templates">Templates</string>
+    <string name="macros">Macros</string>
+    <string name="monitored_by">Monitored by</string>
 </resources>

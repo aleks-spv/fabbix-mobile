@@ -53,7 +53,6 @@ class ZabbixRepositoryImpl @Inject constructor(
         val triggerParams = mapOf<String, Any>(
             "triggerids" to triggerIds,
             "selectHosts" to listOf("hostid", "name", "active_available"),
-            "selectInterfaces" to listOf("ip"),
             "output" to listOf("triggerid", "description", "expression", "opdata"),
             "monitored" to true
         )
@@ -61,12 +60,44 @@ class ZabbixRepositoryImpl @Inject constructor(
         val triggerResponse = service.call(triggerRequest, "Bearer $auth")
         val triggerHostMap = parseTriggerHosts(triggerResponse.result)
 
-        problems
+        // Получаем дополнительные данные о хостах (интерфейсы и группы)
+        val allHostIds = triggerHostMap.values.flatMap { it.hosts.map { h -> h.hostId } }.distinct()
+        if (allHostIds.isEmpty()) return@apiCall problems
             .filter { triggerHostMap.containsKey(it.objectId) }
             .map { problem ->
                 val triggerInfo = triggerHostMap[problem.objectId]
                 problem.copy(
                     hosts = triggerInfo?.hosts ?: emptyList(),
+                    triggerDescription = triggerInfo?.triggerDescription ?: "",
+                    triggerExpression = triggerInfo?.triggerExpression ?: "",
+                    opdata = triggerInfo?.opdata ?: ""
+                )
+            }
+
+        // Вызов host.get для получения интерфейсов и групп
+        val hostDetailParams = mapOf<String, Any>(
+            "hostids" to allHostIds,
+            "output" to listOf("hostid"),
+            "selectInterfaces" to listOf("ip", "dns", "type"),
+            "selectHostGroups" to listOf("groupid", "name")
+        )
+        val hostDetailRequest = ZabbixRequest(method = "host.get", params = hostDetailParams)
+        val hostDetailResponse = service.call(hostDetailRequest, "Bearer $auth")
+        val hostDetails = parseHostDetails(hostDetailResponse.result)  // Map<hostId, HostExtraInfo>
+
+        problems
+            .filter { triggerHostMap.containsKey(it.objectId) }
+            .map { problem ->
+                val triggerInfo = triggerHostMap[problem.objectId]
+                val hosts = triggerInfo?.hosts?.map { host ->
+                    val extra = hostDetails[host.hostId]
+                    host.copy(
+                        ip = extra?.ip ?: "",
+                        groups = extra?.groups ?: emptyList()
+                    )
+                } ?: emptyList()
+                problem.copy(
+                    hosts = hosts,
                     triggerDescription = triggerInfo?.triggerDescription ?: "",
                     triggerExpression = triggerInfo?.triggerExpression ?: "",
                     opdata = triggerInfo?.opdata ?: ""
@@ -78,15 +109,31 @@ class ZabbixRepositoryImpl @Inject constructor(
         baseUrl: String, ignoreSsl: Boolean, auth: String
     ): Result<List<Host>> = apiCall(baseUrl, ignoreSsl) { service ->
         val params = mapOf(
-            "output" to listOf("hostid", "host", "name", "status", "active_available"),
+            "output" to listOf("hostid", "host", "name", "status", "active_available", "proxy_hostid", "proxyid"),
             "selectInterfaces" to listOf("ip", "dns", "type"),
+            "selectParentTemplates" to listOf("templateid", "name"),
+            "selectMacros" to listOf("macro", "value"),
+            "selectHostGroups" to listOf("groupid", "name"),
             "sortfield" to "name",
             "limit" to 500
         )
         val request = ZabbixRequest(method = "host.get", params = params)
         val response = service.call(request, "Bearer $auth")
         if (response.error != null) throw ZabbixException(response.error.message, response.error.data)
-        parseHosts(response.result)
+        
+        // Получаем имена прокси
+        val proxyIds = parseProxyIds(response.result)
+        val proxyNames = if (proxyIds.isNotEmpty()) {
+            val proxyParams = mapOf<String, Any>(
+                "proxyids" to proxyIds,
+                "output" to listOf("proxyid", "name")
+            )
+            val proxyRequest = ZabbixRequest(method = "proxy.get", params = proxyParams)
+            val proxyResponse = service.call(proxyRequest, "Bearer $auth")
+            parseProxyNames(proxyResponse.result)
+        } else emptyMap()
+        
+        parseHosts(response.result, proxyNames)
     }
 
     override suspend fun getDashboards(
@@ -132,6 +179,11 @@ class ZabbixRepositoryImpl @Inject constructor(
         val opdata: String
     )
 
+    data class HostExtraInfo(
+        val ip: String,
+        val groups: List<String>
+    )
+
     private fun parseProblems(result: JsonElement?): List<Problem> {
         val arr = result as? JsonArray ?: return emptyList()
         return arr.map { el ->
@@ -148,7 +200,7 @@ class ZabbixRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun parseHosts(result: JsonElement?): List<Host> {
+    private fun parseHosts(result: JsonElement?, proxyNames: Map<String, String> = emptyMap()): List<Host> {
         val arr = result as? JsonArray ?: return emptyList()
         return arr.map { el ->
             val obj = el.asJsonObject
@@ -160,14 +212,54 @@ class ZabbixRepositoryImpl @Inject constructor(
                     type = io.get("type")?.asString?.toIntOrNull() ?: 0
                 )
             } ?: emptyList()
+            
+            val templates = (obj.get("parentTemplates") as? JsonArray)?.mapNotNull {
+                it.asJsonObject.get("name")?.asString
+            } ?: emptyList()
+            
+            val macros = (obj.get("macros") as? JsonArray)?.mapNotNull {
+                val m = it.asJsonObject
+                val macro = m.get("macro")?.asString ?: return@mapNotNull null
+                val value = m.get("value")?.asString ?: ""
+                HostMacro(macro, value)
+            } ?: emptyList()
+            
+            val proxyId = obj.get("proxyid")?.asString 
+                ?: obj.get("proxy_hostid")?.asString ?: "0"
+            val monitoredBy = if (proxyId == "0" || proxyId.isEmpty()) "Zabbix Server"
+                else proxyNames[proxyId] ?: "Proxy #$proxyId"
+            
             Host(
                 hostId = obj.get("hostid")?.asString ?: "",
                 technicalName = obj.get("host")?.asString ?: "",
                 visibleName = obj.get("name")?.asString ?: "",
                 enabled = obj.get("status")?.asString == "0",
                 available = HostAvailability.fromId(obj.get("active_available")?.asString?.toIntOrNull() ?: 0),
-                interfaces = interfaces
+                interfaces = interfaces,
+                templates = templates,
+                macros = macros,
+                monitoredBy = monitoredBy
             )
+        }
+    }
+
+    private fun parseProxyIds(result: JsonElement?): List<String> {
+        val arr = result as? JsonArray ?: return emptyList()
+        return arr.mapNotNull { el ->
+            val obj = el.asJsonObject
+            val proxyId = obj.get("proxyid")?.asString 
+                ?: obj.get("proxy_hostid")?.asString ?: "0"
+            if (proxyId != "0" && proxyId.isNotEmpty()) proxyId else null
+        }.distinct()
+    }
+
+    private fun parseProxyNames(result: JsonElement?): Map<String, String> {
+        val arr = result as? JsonArray ?: return emptyMap()
+        return arr.associate { el ->
+            val obj = el.asJsonObject
+            val proxyId = obj.get("proxyid")?.asString ?: ""
+            val name = obj.get("name")?.asString ?: ""
+            proxyId to name
         }
     }
 
@@ -209,6 +301,19 @@ class ZabbixRepositoryImpl @Inject constructor(
                 triggerExpression = triggerExpression,
                 opdata = opdata
             )
+        }
+    }
+
+    private fun parseHostDetails(result: JsonElement?): Map<String, HostExtraInfo> {
+        val arr = result as? JsonArray ?: return emptyMap()
+        return arr.associate { el ->
+            val obj = el.asJsonObject
+            val hostId = obj.get("hostid")?.asString ?: ""
+            val ip = (obj.get("interfaces") as? JsonArray)
+                ?.firstOrNull()?.asJsonObject?.get("ip")?.asString ?: ""
+            val groups = (obj.getAsJsonArray("hostgroups") ?: obj.getAsJsonArray("groups"))
+                ?.mapNotNull { it.asJsonObject.get("name")?.asString } ?: emptyList()
+            hostId to HostExtraInfo(ip = ip, groups = groups)
         }
     }
 

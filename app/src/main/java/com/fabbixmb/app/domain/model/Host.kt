@@ -6,7 +6,15 @@ data class Host(
     val visibleName: String,
     val enabled: Boolean,
     val available: HostAvailability,
-    val interfaces: List<HostInterface> = emptyList()
+    val interfaces: List<HostInterface> = emptyList(),
+    val templates: List<String> = emptyList(),
+    val macros: List<HostMacro> = emptyList(),
+    val monitoredBy: String = ""
+)
+
+data class HostMacro(
+    val macro: String,
+    val value: String
 )
 
 enum class HostAvailability(val id: Int) {
