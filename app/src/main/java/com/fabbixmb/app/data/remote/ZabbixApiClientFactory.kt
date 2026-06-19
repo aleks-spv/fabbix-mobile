@@ -1,5 +1,6 @@
 package com.fabbixmb.app.data.remote
 
+import com.fabbixmb.app.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -9,10 +10,17 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
+import java.util.concurrent.ConcurrentHashMap
 
 class ZabbixApiClientFactory {
+    private val cache = ConcurrentHashMap<Pair<String, Boolean>, ZabbixApiService>()
 
     fun createService(baseUrl: String, ignoreSsl: Boolean): ZabbixApiService {
+        val key = baseUrl to ignoreSsl
+        return cache.getOrPut(key) { buildService(baseUrl, ignoreSsl) }
+    }
+
+    private fun buildService(baseUrl: String, ignoreSsl: Boolean): ZabbixApiService {
         val builder = OkHttpClient.Builder()
 
         if (ignoreSsl) {
@@ -29,7 +37,12 @@ class ZabbixApiClientFactory {
         }
 
         builder.addInterceptor(
-            HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+            HttpLoggingInterceptor().apply {
+                level = if (BuildConfig.DEBUG)
+                    HttpLoggingInterceptor.Level.BODY
+                else
+                    HttpLoggingInterceptor.Level.NONE
+            }
         )
 
         val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"

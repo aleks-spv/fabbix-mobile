@@ -1,6 +1,5 @@
 package com.fabbixmb.app.presentation.servers
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,11 +10,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -82,36 +83,66 @@ private fun ServerCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val containerColor by animateColorAsState(
-        if (isActive) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceVariant,
-        label = "card_color"
-    )
+    var showDropdown by remember { mutableStateOf(false) }
+    
+    if (showDropdown) {
+        DropdownMenu(
+            expanded = showDropdown,
+            onDismissRequest = { showDropdown = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.edit_server)) },
+                onClick = {
+                    showDropdown = false
+                    onEdit()
+                },
+                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.delete)) },
+                onClick = {
+                    showDropdown = false
+                    onDelete()
+                },
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+            )
+        }
+    }
+    
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Color indicator bar
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent)
+            )
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(server.name, style = MaterialTheme.typography.titleMedium)
-                Text(server.url, style = MaterialTheme.typography.bodySmall)
-                if (server.ignoreSsl) {
-                    Text("SSL ignored", style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error)
-                }
+                Text(server.name, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(server.url, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (server.ignoreSsl) {
+                        SuggestionChip(
+                            modifier = Modifier.padding(top = 4.dp),
+                            onClick = { },
+                            label = { Text(stringResource(R.string.ssl)) }
+                        )
+                    }
             }
             if (isActive) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary)
-            }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = null)
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = null)
+            } else {
+                IconButton(onClick = { showDropdown = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
+                }
             }
         }
     }

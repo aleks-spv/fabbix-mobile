@@ -4,8 +4,7 @@ data class ZabbixRequest(
     val jsonrpc: String = "2.0",
     val method: String,
     val params: Map<String, Any> = emptyMap(),
-    val id: Int = 1,
-    val auth: String? = null
+    val id: Int = 1
 )
 
 data class ZabbixResponse<T>(

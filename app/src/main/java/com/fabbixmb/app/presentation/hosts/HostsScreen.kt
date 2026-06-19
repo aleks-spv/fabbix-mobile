@@ -78,7 +78,7 @@ private fun HostCard(host: Host) {
                     Text(host.technicalName, style = MaterialTheme.typography.bodySmall)
                 }
                 if (!host.enabled) {
-                    Text("disabled", style = MaterialTheme.typography.labelSmall,
+                    Text(stringResource(R.string.host_disabled), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error)
                 }
             }

@@ -37,14 +37,41 @@ class ZabbixRepositoryImpl @Inject constructor(
             "selectTags" to "extend",
             "sortfield" to listOf("eventid"),
             "sortorder" to "DESC",
-            "recent" to true,
+            "suppressed" to false,
             "limit" to 200
         )
         if (severities != null) params["severities"] = severities
-        val request = ZabbixRequest(method = "problem.get", params = params, auth = auth)
-        val response = service.call(request)
+        val request = ZabbixRequest(method = "problem.get", params = params)
+        val response = service.call(request, "Bearer $auth")
         if (response.error != null) throw ZabbixException(response.error.message, response.error.data)
-        parseProblems(response.result)
+        val problems = parseProblems(response.result)
+
+        // Batch-fetch host names and trigger details via trigger.get
+        val triggerIds = problems.map { it.objectId }.distinct()
+        if (triggerIds.isEmpty()) return@apiCall problems
+
+        val triggerParams = mapOf<String, Any>(
+            "triggerids" to triggerIds,
+            "selectHosts" to listOf("hostid", "name", "active_available"),
+            "selectInterfaces" to listOf("ip"),
+            "output" to listOf("triggerid", "description", "expression", "opdata"),
+            "monitored" to true
+        )
+        val triggerRequest = ZabbixRequest(method = "trigger.get", params = triggerParams)
+        val triggerResponse = service.call(triggerRequest, "Bearer $auth")
+        val triggerHostMap = parseTriggerHosts(triggerResponse.result)
+
+        problems
+            .filter { triggerHostMap.containsKey(it.objectId) }
+            .map { problem ->
+                val triggerInfo = triggerHostMap[problem.objectId]
+                problem.copy(
+                    hosts = triggerInfo?.hosts ?: emptyList(),
+                    triggerDescription = triggerInfo?.triggerDescription ?: "",
+                    triggerExpression = triggerInfo?.triggerExpression ?: "",
+                    opdata = triggerInfo?.opdata ?: ""
+                )
+            }
     }
 
     override suspend fun getHosts(
@@ -56,8 +83,8 @@ class ZabbixRepositoryImpl @Inject constructor(
             "sortfield" to "name",
             "limit" to 500
         )
-        val request = ZabbixRequest(method = "host.get", params = params, auth = auth)
-        val response = service.call(request)
+        val request = ZabbixRequest(method = "host.get", params = params)
+        val response = service.call(request, "Bearer $auth")
         if (response.error != null) throw ZabbixException(response.error.message, response.error.data)
         parseHosts(response.result)
     }
@@ -66,10 +93,27 @@ class ZabbixRepositoryImpl @Inject constructor(
         baseUrl: String, ignoreSsl: Boolean, auth: String
     ): Result<List<Dashboard>> = apiCall(baseUrl, ignoreSsl) { service ->
         val params = mapOf("output" to "extend")
-        val request = ZabbixRequest(method = "dashboard.get", params = params, auth = auth)
-        val response = service.call(request)
+        val request = ZabbixRequest(method = "dashboard.get", params = params)
+        val response = service.call(request, "Bearer $auth")
         if (response.error != null) throw ZabbixException(response.error.message, response.error.data)
         parseDashboards(response.result)
+    }
+
+    override suspend fun getTriggers(
+        baseUrl: String, ignoreSsl: Boolean, auth: String
+    ): Result<List<Trigger>> = apiCall(baseUrl, ignoreSsl) { service ->
+        val params = mapOf(
+            "output" to "extend",
+            "selectHosts" to listOf("hostid", "name"),
+            "sortfield" to "lastchange",
+            "sortorder" to "DESC",
+            "monitored" to true,
+            "limit" to 200
+        )
+        val request = ZabbixRequest(method = "trigger.get", params = params)
+        val response = service.call(request, "Bearer $auth")
+        if (response.error != null) throw ZabbixException(response.error.message, response.error.data)
+        parseTriggers(response.result)
     }
 
     override suspend fun testConnection(
@@ -80,6 +124,13 @@ class ZabbixRepositoryImpl @Inject constructor(
         if (response.error != null) throw ZabbixException(response.error.message, response.error.data)
         (response.result as? JsonPrimitive)?.asString ?: "unknown"
     }
+
+    data class TriggerHostInfo(
+        val hosts: List<ProblemHost>,
+        val triggerDescription: String,
+        val triggerExpression: String,
+        val opdata: String
+    )
 
     private fun parseProblems(result: JsonElement?): List<Problem> {
         val arr = result as? JsonArray ?: return emptyList()
@@ -127,6 +178,53 @@ class ZabbixRepositoryImpl @Inject constructor(
             Dashboard(
                 id = obj.get("dashboardid")?.asString ?: "",
                 name = obj.get("name")?.asString ?: ""
+            )
+        }
+    }
+
+    private fun parseTriggerHosts(result: JsonElement?): Map<String, TriggerHostInfo> {
+        val arr = result as? JsonArray ?: return emptyMap()
+        return arr.associate { el ->
+            val obj = el.asJsonObject
+            val triggerId = obj.get("triggerid")?.asString ?: ""
+            val hosts = (obj.get("hosts") as? JsonArray)?.mapNotNull { h ->
+                val hostObj = h.asJsonObject
+                val hostId = hostObj.get("hostid")?.asString ?: ""
+                val name = hostObj.get("name")?.asString ?: ""
+                val availability = hostObj.get("active_available")?.asString?.toIntOrNull() ?: 0
+                ProblemHost(
+                    hostId = hostId,
+                    name = name,
+                    availability = HostAvailability.fromId(availability)
+                )
+            } ?: emptyList()
+            
+            val triggerDescription = obj.get("description")?.asString ?: ""
+            val triggerExpression = obj.get("expression")?.asString ?: ""
+            val opdata = obj.get("opdata")?.asString ?: ""
+            
+            triggerId to TriggerHostInfo(
+                hosts = hosts,
+                triggerDescription = triggerDescription,
+                triggerExpression = triggerExpression,
+                opdata = opdata
+            )
+        }
+    }
+
+    private fun parseTriggers(result: JsonElement?): List<Trigger> {
+        val arr = result as? JsonArray ?: return emptyList()
+        return arr.map { el ->
+            val obj = el.asJsonObject
+            val hosts = (obj.get("hosts") as? JsonArray)?.mapNotNull { h ->
+                h.asJsonObject.get("name")?.asString
+            } ?: emptyList()
+            Trigger(
+                triggerId = obj.get("triggerid")?.asString ?: "",
+                description = obj.get("description")?.asString ?: "",
+                priority = Severity.fromId(obj.get("priority")?.asString?.toIntOrNull() ?: 0),
+                status = obj.get("status")?.asString == "0",
+                hosts = hosts
             )
         }
     }

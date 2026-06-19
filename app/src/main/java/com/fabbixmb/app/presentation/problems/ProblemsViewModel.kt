@@ -10,6 +10,7 @@ import com.fabbixmb.app.domain.repository.ServerRepository
 import com.fabbixmb.app.domain.repository.ZabbixRepository
 import com.fabbixmb.app.presentation.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -33,6 +34,7 @@ class ProblemsViewModel @Inject constructor(
     val searchQuery = _searchQuery.asStateFlow()
 
     private var allProblems: List<Problem> = emptyList()
+    private var autoRefreshJob: Job? = null
 
     init { loadProblems() }
 
@@ -81,7 +83,8 @@ class ProblemsViewModel @Inject constructor(
     }
 
     fun startAutoRefresh() {
-        viewModelScope.launch {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = viewModelScope.launch {
             appPrefs.refreshIntervalMs.collectLatest { interval ->
                 while (true) {
                     delay(interval)

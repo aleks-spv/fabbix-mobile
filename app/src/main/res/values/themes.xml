@@ -1,3 +1,5 @@
 <resources>
-    <style name="Theme.FabbixMobile" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.FabbixMobile" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
 </resources>

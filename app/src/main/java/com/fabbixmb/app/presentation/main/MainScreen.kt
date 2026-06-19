@@ -11,14 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.fabbixmb.app.R
-import com.fabbixmb.app.presentation.dashboard.DashboardScreen
+import com.fabbixmb.app.presentation.overview.OverviewScreen
 import com.fabbixmb.app.presentation.hosts.HostsScreen
 import com.fabbixmb.app.presentation.problems.ProblemsScreen
 
 enum class MainTab(val icon: ImageVector, val labelRes: Int) {
+    OVERVIEW(Icons.Default.Dashboard, R.string.overview),
     PROBLEMS(Icons.Default.Warning, R.string.problems),
-    HOSTS(Icons.Default.Dns, R.string.hosts),
-    DASHBOARD(Icons.Default.Dashboard, R.string.dashboard)
+    HOSTS(Icons.Default.Dns, R.string.hosts)
 }
 
 @Composable
@@ -54,9 +54,9 @@ fun MainScreen(
     ) { padding ->
         val modifier = Modifier.padding(padding)
         when (selectedTab) {
-            0 -> ProblemsScreen(modifier = modifier, onSessionExpired = onSessionExpired)
-            1 -> HostsScreen(modifier = modifier, onSessionExpired = onSessionExpired)
-            2 -> DashboardScreen(modifier = modifier, onSessionExpired = onSessionExpired)
+            0 -> OverviewScreen(modifier = modifier, onSessionExpired = onSessionExpired)
+            1 -> ProblemsScreen(modifier = modifier, onSessionExpired = onSessionExpired)
+            2 -> HostsScreen(modifier = modifier, onSessionExpired = onSessionExpired)
         }
     }
 }
