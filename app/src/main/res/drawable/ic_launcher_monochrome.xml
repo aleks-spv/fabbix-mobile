@@ -4,23 +4,27 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group>
-        <!-- Simplified smartphone body (rounded rect: 27,14 54x80 r=4) -->
-        <path
-            android:pathData="M31,14 L77,14 Q81,14 81,18 L81,90 Q81,94 77,94 L31,94 Q27,94 27,90 L27,18 Q27,14 31,14 Z"
-            android:fillColor="#000000" />
 
-        <!-- Simplified screen (rounded rect: 30,24 48x60 r=2) -->
-        <path
-            android:pathData="M32,24 L76,24 Q78,24 78,26 L78,82 Q78,84 76,84 L32,84 Q30,84 30,82 L30,26 Q30,24 32,24 Z"
-            android:fillColor="#000000" />
+    <!-- Phone body outline -->
+    <path
+        android:pathData="M38,22 L70,22 Q74,22 74,26 L74,86 Q74,90 70,90 L38,90 Q34,90 34,86 L34,26 Q34,22 38,22 Z"
+        android:strokeWidth="2"
+        android:strokeColor="#000000"
+        android:fillColor="#00000000" />
 
-        <!-- Simplified line chart -->
-        <path
-            android:pathData="M32,62 L40,56 L48,58 L56,52 L64,54 L72,48 L76,50"
-            android:strokeWidth="1.5"
-            android:strokeColor="#000000"
-            android:strokeLineCap="round"
-            android:fillColor="#00000000" />
-    </group>
+    <!-- Screen outline -->
+    <path
+        android:pathData="M37,29 L71,29 Q72,29 72,30 L72,82 Q72,83 71,83 L37,83 Q36,83 36,82 L36,30 Q36,29 37,29 Z"
+        android:strokeWidth="1"
+        android:strokeColor="#000000"
+        android:fillColor="#00000000" />
+
+    <!-- Heartbeat pulse line -->
+    <path
+        android:pathData="M36,56 L45,56 L47,51 L49,56 L52,56 L54,34 L56,76 L58,56 L72,56"
+        android:strokeWidth="2.5"
+        android:strokeColor="#000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
 </vector>
