@@ -18,7 +18,7 @@ Free and open-source Android client for [Zabbix](https://www.zabbix.com/) monito
 
 ## Screenshots
 
-*Coming soon*
+![Dashboard](./screenshots/01_dashboard.png)
 
 ## Tech Stack
 
